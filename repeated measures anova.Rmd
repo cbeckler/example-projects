@@ -1,0 +1,134 @@
+---
+title: "Repeated Measures ANOVA"
+author: "Charles Beckler"
+date: "February 5, 2019"
+output:
+  pdf_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+---
+
+This was an assignment to use repeated measures ANOVA to determine if amount of alcohol drunk and brightness of lighting had an effect on percieved attractiveness (the "beer goggles" effect).
+
+#Load required packages
+
+```{r message = FALSE}
+library(reshape2)
+library(ggplot2)
+library(jtools)
+library(Rmisc)
+library(nlme)
+```
+
+#Import data
+
+```{r}
+setwd("C:/Users/charl/OneDrive/Documents/School/Stats 421/Data/11.28.2018")
+
+goggles<-read.delim("BeerGogglesLighting.dat",header=T)
+
+head(goggles)
+```
+
+#Reshaping the data and adding variables
+
+The data was in wide format, and needed to be converted into long format for analysis. After that, the variables needed to be renamed, and then factor variables for drink and lighting were created.
+
+```{r}
+goggles2<-melt(goggles,id.vars = "Participant")
+names(goggles2)<-c("participant","groups","score")
+goggles2$drink<-gl(4,52,labels = c("0 Pints","2 Pints","4 Pints","6 Pints"))
+goggles2$lights<-gl(2,26,208,labels = c("Dim","Bright"))
+
+head(goggles2)
+```
+
+#Graphs
+
+##Drink effect
+
+This graph shows the main effect of drink.
+
+```{r}
+drinksum<-summarySE(goggles2,measurevar = "score",groupvars = "drink")
+ggplot(drinksum,aes(x=drink,y=score))+geom_point()+
+  geom_errorbar(aes(ymin=score-se,ymax=score+se),width=.1)+theme_apa()
+```
+
+The lack of overlap in error bars between some of the groups indicates a significant difference likely exists between groups.
+
+##Light
+
+```{r}
+lightssum<-summarySE(goggles2,measurevar = "score",groupvars = "lights")
+ggplot(lightssum,aes(x=lights,y=score))+geom_point()+
+  geom_errorbar(aes(ymin=score-se,ymax=score+se),width=.1)+theme_apa()
+```
+
+The lack of overlap between error bars indicates there is likely a significant difference between groups.
+
+##Drink/Light Interaction
+
+```{r}
+interactsum<-summarySE(goggles2,measurevar = "score",groupvars = c("drink","lights"))
+ggplot(interactsum,aes(x=drink,y=score,group=lights))+geom_point(size=3)+
+  geom_line()+theme_apa()
+```
+
+The lines intersecting each other indicates there is likely an interaction effect.
+
+#Coding contrasts
+
+Here I recode the contrasts to compare specific groups rather than just the R defaults, which are dummy coded.
+
+##Drink contrasts
+
+```{r}
+alcvno<-c(-3,1,1,1)
+twov46<-c(0,-2,1,1)
+fourv6<-c(0,0,-1,1)
+contrasts(goggles2$drink)<-cbind(alcvno,twov46,fourv6)
+```
+
+In order, these contrasts are comparing: 1) no alcohol versus all alcohol groups, 2) 2 pints versus 4 and 6 pints, and 3) 4 versus 6 pints.
+
+##Light contrast
+
+```{r}
+dimvbright<-c(-1,1)
+contrasts(goggles2$lights)<-cbind(dimvbright)
+```
+
+This compares dim versus bright, but recodes it as -1, 1 rather than dummy coding.
+
+#Model comparisons
+
+##Creating the models
+
+```{r}
+meanModel<-lme(score~1,random = ~1|participant/drink/lights,data=goggles2,method = "ML")
+drinkModel<-lme(score~drink,random = ~1|participant/drink/lights,data=goggles2,method = "ML")
+plusModel<-lme(score~drink+lights,random = ~1|participant/drink/lights,data=goggles2,method = "ML")
+interactModel<-lme(score~drink*lights,random = ~1|participant/drink/lights,data=goggles2,method = "ML")
+```
+
+In order, the models are: 1) the mean model (simplest), 2) the drink only model, 3) the additive drink and light model, and 4) the model with the interaction of drink and light (most complex).
+
+##Comparison
+
+```{r}
+anova(meanModel,drinkModel,plusModel,interactModel)
+```
+
+The most complex model is statistically significant, and is therefore the model that is best to use.
+
+##Model summary
+
+```{r}
+summary(interactModel)
+```
+
+The R console output provides the model formula. The second data frame shows that p-values for all contrast coded comparisons was < 0.05. All the comparisons had significant differences.
+
+**This concludes the analyses.**
