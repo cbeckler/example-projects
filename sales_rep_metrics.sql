@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW analytics.vw_sales_metrics
+CREATE OR REPLACE VIEW reporting.vw_sales_metrics
 AS WITH offers AS (
          SELECT o_1.app_id,
             max(o_1.loan_amount) AS offer_amt
