@@ -1,0 +1,87 @@
+---
+title: "Multiple Regression"
+author: "Charles Beckler"
+date: "February 5, 2019"
+output:
+  pdf_document:
+    toc: yes
+  html_notebook:
+    toc: yes
+---
+
+This was a project done for class to see if credit hours taken per semester and perfectionism were correlated with student depression. It was done early in my R learning. I collected the data using qualtrics. PI is perfectionism and PHQ9 is depression.
+
+#Load required packages
+
+```{r}
+library(ggplot2)
+library(jtools)
+```
+
+#Import data
+
+```{r}
+setwd("C:/Users/charl/OneDrive/Documents/School/Past Classes/Fall 2017/Non-Exp Research Methods/Study Data")
+depp<-read.csv("ThreeSixteenvTwo.csv")
+depp2<-depp[,c(1,2,12,72)]
+head(depp2)
+```
+
+Before importing the data into R, I had previously calculated the sum scores for depression and perfectionism.
+
+#Simple means and summary statistics
+
+```{r}
+mean(depp2$CREDITS)
+mean(depp2$PI.SUM)
+mean(depp2$PHQ9.SUM)
+```
+
+```{r}
+summary(depp2$CREDITS)
+summary(depp2$PI.SUM)
+summary(depp2$PHQ9.SUM)
+```
+
+#Testing for outliers
+
+```{r}
+outlier_values.credit <- boxplot.stats(depp2$CREDITS)$out
+outlier_values.credit
+```
+ 
+Two outliers were found in credits. They were not removed due to an already small sample size and the fact that this was not intended to be a publishable project.
+
+```{r}
+outlier_values.pi<-boxplot.stats(depp2$PI.SUM)$out
+outlier_values.pi
+```
+
+One outlier was found in perfectionism. Like credits, it was not removed.
+
+#Multiple regression
+
+```{r}
+multreg<-lm(PHQ9.SUM~CREDITS*PI.SUM, data=depp2)
+summary(multreg)
+```
+
+Likely due to the small sample size, none of the predictors nor their interaction were significant. However, the model itself was significant, indicating there may be some kind of relationship that could be found via replication with a larger sample size.
+
+#Visualizing the data
+
+First, credit hours were grouped into categories.
+
+```{r}
+depp2$group=with(depp2,ifelse(CREDITS>=4&CREDITS<=9,'very low credits',ifelse(CREDITS>=10&CREDITS<=14,'low credits',ifelse(CREDITS>=15&CREDITS<=16,'medium credits',ifelse(CREDITS>=18&CREDITS<=20,'high credits','NA')))))
+```
+
+Then, the graph was created.
+
+```{r}
+ggplot(depp2, aes(PI.SUM, PHQ9.SUM, shape = factor(group)))+ggtitle("Credits, Perfectionism, and Depression")+xlab("PI Perfectionism Scores")+ylab("PHQ9 Depression Scores") + geom_point() + stat_smooth(aes(color=factor(group)),method = lm, se = F) + theme_apa()
+```
+
+The graph indicates that there may be some kind of interaction effect between the grouped credit hours and perfectionism. However, the interaction was not statistically significant in our earlier analysis and this graph should be interpreted with caution.
+
+**This concludes the analyses.**
